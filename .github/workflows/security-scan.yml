@@ -1,0 +1,43 @@
+name: SecureScan AI - Security Scan
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install SecureScan AI engine
+        run: |
+          python -m pip install --upgrade pip
+          pip install "git+https://github.com/saimani21/securescan-ai-v2.git@main"
+
+      - name: Run SecureScan AI (Semgrep + Secrets, fail on HIGH/CRITICAL)
+        run: |
+          secscan scan . \
+            --severity HIGH \
+            --severity CRITICAL
+      - name: Run SecureScan AI (full pipeline)
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: |
+          secscan scan . \
+            --severity HIGH \
+            --severity CRITICAL \
+            --llm openai \
+            --enrich-cve
