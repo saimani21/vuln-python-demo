@@ -1,0 +1,39 @@
+name: SecureScan AI on vuln-python-demo
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout vulnerable repo
+        uses: actions/checkout@v4
+
+      - name: Checkout SecureScan AI tool
+        uses: actions/checkout@v4
+        with:
+          repository: saimani21/securescan-ai-v2
+          path: securescan-ai-v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install SecureScan AI
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r securescan-ai-v2/requirements/base.txt
+          pip install -e ./securescan-ai-v2
+
+      - name: Run SecureScan AI against this repo
+        run: |
+          source .venv/bin/activate
+          secscan scan . --severity HIGH --severity CRITICAL
