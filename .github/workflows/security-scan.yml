@@ -4,6 +4,7 @@ on:
   push:
     branches: [ "main" ]
   pull_request:
+    branches: [ "main" ]
 
 jobs:
   security-scan:
@@ -11,33 +12,40 @@ jobs:
 
     permissions:
       contents: read
+      security-events: write
 
     steps:
-      - name: Checkout repository
+      - name: Checkout vulnerable repo
         uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: Checkout SecureScan AI engine
+        uses: actions/checkout@v4
+        with:
+          repository: saimani21/securescan-ai-v2
+          path: securescan-ai-engine
+
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install SecureScan AI engine
+      - name: Install SecureScan AI
         run: |
           python -m pip install --upgrade pip
-          pip install "git+https://github.com/saimani21/securescan-ai-v2.git@main"
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install ./securescan-ai-engine
 
       - name: Run SecureScan AI (Semgrep + Secrets, fail on HIGH/CRITICAL)
-        run: |
-          secscan scan . \
-            --severity HIGH \
-            --severity CRITICAL
-      - name: Run SecureScan AI (full pipeline)
         env:
+          # Optional – add in repo Settings → Secrets if you want LLM + NVD:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
+          source .venv/bin/activate
           secscan scan . \
-            --severity HIGH \
-            --severity CRITICAL \
             --llm openai \
-            --enrich-cve
+            --enrich-cve \
+            --severity HIGH \
+            --severity CRITICAL
+
